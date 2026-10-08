@@ -6,7 +6,6 @@
 <title>CarGPT — Automotive Assistant</title>
 <meta name="description" content="CarGPT is an AI assistant for maintenance, diagnostics, buying advice and EV questions.">
 <style>
-  /* ---------- Tokens ---------- */
   :root {
     --black: #0a0a0a;
     --white: #ffffff;
@@ -22,7 +21,6 @@
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
   }
 
-  /* ---------- Base ---------- */
   *, *::before, *::after { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
@@ -42,10 +40,8 @@
     clip: rect(0 0 0 0); white-space: nowrap;
   }
 
-  /* ---------- Layout ---------- */
   .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; height: 100%; }
 
-  /* ---------- Sidebar ---------- */
   .sidebar {
     display: flex; flex-direction: column;
     background: var(--surface);
@@ -73,9 +69,7 @@
     transition: background .15s;
   }
   .new-chat:hover { background: #262626; }
-  .new-chat kbd {
-    font-family: var(--mono); font-size: 11px; opacity: .6;
-  }
+  .new-chat kbd { font-family: var(--mono); font-size: 11px; opacity: .6; }
 
   .section-label {
     padding: 0 20px 8px;
@@ -104,13 +98,13 @@
   .history li:hover .history-delete, .history-delete:focus-visible { opacity: 1; }
   .history-delete:hover { color: var(--black); }
   .history-empty { padding: 4px 8px; color: var(--muted); font-size: 13px; }
+  @media (hover: none) { .history-delete { opacity: 1; } }
 
   .sidebar-foot {
     padding: 16px 20px; border-top: 1px solid var(--border);
     font-size: 12px; color: var(--muted);
   }
 
-  /* ---------- Main ---------- */
   .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .topbar {
     display: flex; align-items: center; gap: 12px;
@@ -126,7 +120,6 @@
   .scroll { flex: 1; overflow-y: auto; min-height: 0; }
   .column { max-width: var(--content-w); margin: 0 auto; padding: 0 24px; }
 
-  /* ---------- Empty state ---------- */
   .hero { padding: 12vh 0 32px; }
   .eyebrow {
     font-family: var(--mono); font-size: 12px; color: var(--muted);
@@ -157,7 +150,6 @@
   .prompt-title { font-weight: 600; font-size: 14px; display: block; }
   .prompt-sub { font-size: 13px; color: var(--muted); display: block; }
 
-  /* ---------- Messages ---------- */
   .thread { padding: 32px 0 24px; display: flex; flex-direction: column; gap: 28px; }
   .msg { display: grid; grid-template-columns: 72px 1fr; gap: 8px; }
   .msg-role {
@@ -185,7 +177,6 @@
   @keyframes blink { 0%, 80%, 100% { opacity: .2 } 40% { opacity: 1 } }
   @media (prefers-reduced-motion: reduce) { .typing span { animation: none; opacity: .6; } }
 
-  /* ---------- Composer ---------- */
   .composer-wrap { padding: 12px 0 20px; background: var(--white); }
   .composer {
     display: flex; align-items: flex-end; gap: 8px;
@@ -207,7 +198,6 @@
   .send:disabled { opacity: .25; cursor: not-allowed; }
   .composer-hint { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
 
-  /* ---------- Mobile ---------- */
   .scrim { display: none; }
   @media (max-width: 800px) {
     .app { grid-template-columns: 1fr; }
@@ -275,10 +265,9 @@
 (() => {
   "use strict";
 
-
   const KNOWLEDGE = [
     {
-      match: /(warning|dash|light|check engine|mil\b)/i,
+      match: [/\bwarning\b/i, /\bdash\b/i, /\blights?\b/i, /check engine/i, /\bmil\b/i],
       answer:
 `Dashboard lights are grouped by colour, which tells you how urgent they are.
 
@@ -291,7 +280,7 @@ A **flashing** check engine light means active misfire and can damage the cataly
 > Tell me the exact symbol, make, model and year and I can narrow down likely causes.`
     },
     {
-      match: /(tyre|tire|pressure|psi|bar\b)/i,
+      match: [/\btyres?\b/i, /\btires?\b/i, /\bpressure\b/i, /\bpsi\b/i, /\bbar\b/i],
       answer:
 `Use the pressure printed on the driver's door jamb or in the owner's manual, not the number moulded on the tyre sidewall.
 
@@ -303,7 +292,19 @@ A **flashing** check engine light means active misfire and can damage the cataly
 > A sudden drop of more than 4–5 PSI in a week usually points to a slow puncture or a leaking valve.`
     },
     {
-      match: /(oil|service|maintenance|interval|schedule)/i,
+      match: [/\bev\b/i, /\belectric/i, /\bcharg/i, /\bbattery\b/i, /\brange\b/i, /\bkwh\b/i],
+      answer:
+`For daily EV use, battery habits matter more than any single setting.
+
+- Keep the state of charge between roughly **20% and 80%** for daily driving; charge to 100% only before long trips.
+- Prefer AC charging at home. Frequent DC fast charging is fine, but it generates more heat over time.
+- Precondition the battery in cold weather. Winter range loss of 20–30% is normal.
+- Avoid leaving the car for long periods at very high or very low charge.
+
+> Range estimates depend heavily on speed. At 120 km/h expect noticeably less than the rated figure.`
+    },
+    {
+      match: [/\boil\b/i, /\bservice\b/i, /\bmaintenance\b/i, /\binterval\b/i, /\bschedule\b/i],
       answer:
 `Maintenance intervals depend on engine type and driving pattern, so the manual is the authority. As a general guide:
 
@@ -316,19 +317,19 @@ A **flashing** check engine light means active misfire and can damage the cataly
 > Tell me the make, model, year and mileage and I can build a service checklist.`
     },
     {
-      match: /(ev\b|electric|charging|charger|battery|range|kwh)/i,
+      match: [/\bbrakes?\b/i, /\bsqueal/i, /\bgrind/i, /\bpads?\b/i, /\brotors?\b/i, /\bdiscs?\b/i],
       answer:
-`For daily EV use, battery habits matter more than any single setting.
+`Brake noise tells you roughly where to look.
 
-- Keep the state of charge between roughly **20% and 80%** for daily driving; charge to 100% only before long trips.
-- Prefer AC charging at home. Frequent DC fast charging is fine, but it generates more heat over time.
-- Precondition the battery in cold weather. Winter range loss of 20–30% is normal.
-- Avoid leaving the car for long periods at very high or very low charge.
+- **High-pitched squeal** at low speed: often a wear indicator or glazed pads.
+- **Grinding**: pads are likely worn through to the backing plate. Stop driving it and have it inspected, as rotors will be damaged quickly.
+- **Pulsing pedal**: warped or unevenly worn rotors.
+- **Soft pedal**: air or moisture in the fluid, or a leak. Treat as urgent.
 
-> Range estimates depend heavily on speed. At 120 km/h expect noticeably less than the rated figure.`
+> Brakes are safety-critical. Have any of these confirmed by a qualified technician.`
     },
     {
-      match: /(buy|buying|used|purchase|inspection|worth)/i,
+      match: [/\bbuy\b/i, /\bbuying\b/i, /\bused\b/i, /\bpurchase\b/i, /inspection/i, /\bworth\b/i],
       answer:
 `A short checklist for a used car:
 
@@ -341,7 +342,7 @@ A **flashing** check engine light means active misfire and can damage the cataly
 > Share the model and asking price and I can list common faults for that generation.`
     },
     {
-      match: /(fuel|mpg|economy|consumption|efficien|mileage per)/i,
+      match: [/\bfuel\b/i, /\bmpg\b/i, /\beconomy\b/i, /\bconsumption\b/i, /efficien/i, /\bmileage\b/i],
       answer:
 `Fuel economy is mostly driving behaviour and maintenance.
 
@@ -349,18 +350,6 @@ A **flashing** check engine light means active misfire and can damage the cataly
 - Highway speed matters: drag grows with the square of speed, so 100 km/h is much cheaper than 130 km/h.
 - Correct tyre pressure and removing roof boxes or racks when unused each recover a few percent.
 - Short trips with a cold engine are the least efficient pattern.`
-    },
-    {
-      match: /(brake|squeal|grind|pad|rotor|disc)/i,
-      answer:
-`Brake noise tells you roughly where to look.
-
-- **High-pitched squeal** at low speed: often a wear indicator or glazed pads.
-- **Grinding**: pads are likely worn through to the backing plate. Stop driving it and have it inspected, as rotors will be damaged quickly.
-- **Pulsing pedal**: warped or unevenly worn rotors.
-- **Soft pedal**: air or moisture in the fluid, or a leak. Treat as urgent.
-
-> Brakes are safety-critical. Have any of these confirmed by a qualified technician.`
     }
   ];
 
@@ -371,18 +360,28 @@ To give a useful answer, include the **make, model, year** and a short descripti
 
 > Try: "My 2018 Corolla shakes at 100 km/h. What should I check first?"`;
 
+  function bestAnswer(text) {
+    let best = null;
+    let bestScore = 0;
+    for (const entry of KNOWLEDGE) {
+      let score = 0;
+      for (const re of entry.match) if (re.test(text)) score++;
+      if (score > bestScore) { bestScore = score; best = entry; }
+    }
+    return best ? best.answer : FALLBACK;
+  }
+
   const CarGPTClient = {
     reply(history) {
       const last = history[history.length - 1].content;
-      const hit = KNOWLEDGE.find(k => k.match.test(last));
-      const text = hit ? hit.answer : FALLBACK;
+      const text = bestAnswer(last);
       const delay = 500 + Math.random() * 400;
       return new Promise(resolve => setTimeout(() => resolve(text), delay));
     }
   };
 
   const STORE_KEY = "cargpt.v1";
-  const state = { chats: [], activeId: null, busy: false };
+  const state = { chats: [], activeId: null };
 
   const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -390,18 +389,29 @@ To give a useful answer, include the **make, model, year** and a short descripti
     try {
       const raw = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
       if (raw && Array.isArray(raw.chats)) {
-        state.chats = raw.chats;
+        state.chats = raw.chats.map(c => ({
+          id: c.id,
+          title: c.title || "",
+          messages: Array.isArray(c.messages) ? c.messages : [],
+          pending: false
+        }));
         state.activeId = raw.activeId;
       }
-    } catch (_) { /* storage unavailable: run in memory */ }
+    } catch (_) {}
+    if (!state.chats.some(c => c.id === state.activeId)) state.activeId = null;
   }
+
   function save() {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ chats: state.chats, activeId: state.activeId }));
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        chats: state.chats.map(c => ({ id: c.id, title: c.title, messages: c.messages })),
+        activeId: state.activeId
+      }));
     } catch (_) {}
   }
-  const activeChat = () => state.chats.find(c => c.id === state.activeId) || null;
 
+  const activeChat = () => state.chats.find(c => c.id === state.activeId) || null;
+  const isEmptyChat = c => !c.messages.length;
 
   const $ = id => document.getElementById(id);
   const els = {
@@ -422,7 +432,6 @@ To give a useful answer, include the **make, model, year** and a short descripti
     return node;
   }
 
-  // Inline **bold** without using innerHTML.
   function inline(text, parent) {
     text.split(/(\*\*[^*]+\*\*)/g).forEach(part => {
       if (!part) return;
@@ -435,19 +444,17 @@ To give a useful answer, include the **make, model, year** and a short descripti
     return parent;
   }
 
-  // Mini-format -> DOM.
   function renderRich(text) {
     const frag = document.createDocumentFragment();
     text.trim().split(/\n{2,}/).forEach(block => {
       const lines = block.split("\n");
-      if (lines.every(l => l.startsWith("- "))) {
+      if (lines.length && lines.every(l => l.startsWith("- "))) {
         const ul = el("ul");
         lines.forEach(l => ul.append(inline(l.slice(2), el("li"))));
         frag.append(ul);
-      } else if (lines.every(l => l.startsWith("> "))) {
+      } else if (lines.length && lines.every(l => l.startsWith("> "))) {
         frag.append(inline(lines.map(l => l.slice(2)).join(" "), el("p", { class: "note" })));
       } else {
-        // Allow a lead-in paragraph directly followed by list lines.
         const split = lines.findIndex(l => l.startsWith("- "));
         if (split > 0) {
           frag.append(inline(lines.slice(0, split).join(" "), el("p")));
@@ -461,7 +468,6 @@ To give a useful answer, include the **make, model, year** and a short descripti
     });
     return frag;
   }
-
 
   const PROMPTS = [
     ["What does a flashing check engine light mean?", "Warning lights and urgency"],
@@ -502,7 +508,7 @@ To give a useful answer, include the **make, model, year** and a short descripti
   function typingNode() {
     const dots = el("div", { class: "typing", role: "status", "aria-label": "CarGPT is typing" },
       [el("span"), el("span"), el("span")]);
-    return el("article", { class: "msg assistant", id: "typing" }, [
+    return el("article", { class: "msg assistant" }, [
       el("div", { class: "msg-role", text: "CarGPT" }),
       el("div", { class: "msg-body" }, [dots])
     ]);
@@ -511,12 +517,12 @@ To give a useful answer, include the **make, model, year** and a short descripti
   function renderStage() {
     const chat = activeChat();
     els.stage.replaceChildren();
-    if (!chat || chat.messages.length === 0) {
+    if (!chat || (isEmptyChat(chat) && !chat.pending)) {
       els.stage.append(renderHero());
     } else {
       const thread = el("div", { class: "thread", "aria-live": "polite" });
       chat.messages.forEach(m => thread.append(messageNode(m)));
-      if (state.busy) thread.append(typingNode());
+      if (chat.pending) thread.append(typingNode());
       els.stage.append(thread);
     }
     els.topTitle.textContent = chat && chat.title ? chat.title : "New conversation";
@@ -525,7 +531,7 @@ To give a useful answer, include the **make, model, year** and a short descripti
 
   function renderHistory() {
     els.history.replaceChildren();
-    const chats = state.chats.filter(c => c.messages.length);
+    const chats = state.chats.filter(c => !isEmptyChat(c));
     if (!chats.length) {
       els.history.append(el("li", { class: "history-empty", text: "No conversations yet." }));
       return;
@@ -542,14 +548,17 @@ To give a useful answer, include the **make, model, year** and a short descripti
 
   function render() { renderHistory(); renderStage(); }
 
-
-  function newChat() {
-    // Reuse an existing empty chat instead of piling them up.
-    let chat = state.chats.find(c => c.messages.length === 0);
+  function findOrCreateEmptyChat() {
+    let chat = state.chats.find(isEmptyChat);
     if (!chat) {
-      chat = { id: uid(), title: "", messages: [] };
+      chat = { id: uid(), title: "", messages: [], pending: false };
       state.chats.push(chat);
     }
+    return chat;
+  }
+
+  function newChat() {
+    const chat = findOrCreateEmptyChat();
     state.activeId = chat.id;
     save(); render(); closeMenu();
     els.input.focus();
@@ -558,21 +567,27 @@ To give a useful answer, include the **make, model, year** and a short descripti
   function removeChat(id) {
     state.chats = state.chats.filter(c => c.id !== id);
     if (state.activeId === id) state.activeId = null;
-    save(); render();
+    save(); render(); updateSend();
   }
 
   async function submit(text) {
-    text = text.trim();
-    if (!text || state.busy) return;
+    text = text.trim().slice(0, 2000);
+    if (!text) return;
+
     let chat = activeChat();
     if (!chat) {
-      chat = { id: uid(), title: "", messages: [] };
-      state.chats.push(chat);
+      chat = findOrCreateEmptyChat();
       state.activeId = chat.id;
     }
-    if (!chat.title) chat.title = text.length > 48 ? text.slice(0, 47) + "…" : text;
+    if (chat.pending) return;
+
+    if (!chat.title) {
+      const title = text.replace(/\s+/g, " ").trim();
+      chat.title = title.length > 48 ? title.slice(0, 47) + "…" : title;
+    }
+
     chat.messages.push({ role: "user", content: text });
-    state.busy = true;
+    chat.pending = true;
     save(); render(); updateSend();
 
     let answer;
@@ -581,49 +596,66 @@ To give a useful answer, include the **make, model, year** and a short descripti
     } catch (_) {
       answer = "Something went wrong reaching the assistant. Please try again.";
     }
-    chat.messages.push({ role: "assistant", content: answer });
-    state.busy = false;
-    save(); render(); updateSend();
+
+    if (state.chats.some(c => c.id === chat.id)) {
+      chat.messages.push({ role: "assistant", content: answer });
+      chat.pending = false;
+      save();
+    }
+
+    render(); updateSend();
     els.input.focus();
   }
 
-
   function updateSend() {
-    els.send.disabled = state.busy || !els.input.value.trim();
+    const chat = activeChat();
+    els.send.disabled = Boolean(chat && chat.pending) || !els.input.value.trim();
   }
+
   function autosize() {
     els.input.style.height = "auto";
     els.input.style.height = Math.min(els.input.scrollHeight, 160) + "px";
   }
 
   els.input.addEventListener("input", () => { autosize(); updateSend(); });
+
   els.input.addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       els.form.requestSubmit();
     }
   });
+
   els.form.addEventListener("submit", e => {
     e.preventDefault();
     const v = els.input.value;
+    if (!v.trim()) return;
     els.input.value = "";
     autosize(); updateSend();
     submit(v);
   });
 
   els.newChat.addEventListener("click", newChat);
+
   document.addEventListener("keydown", e => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); newChat(); }
-    if (e.key === "Escape") closeMenu();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      newChat();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (els.sidebar.classList.contains("open")) closeMenu();
+      else if (document.activeElement === els.input) els.input.blur();
+    }
   });
 
   function openMenu() { els.sidebar.classList.add("open"); els.scrim.classList.add("open"); }
   function closeMenu() { els.sidebar.classList.remove("open"); els.scrim.classList.remove("open"); }
+
   els.menuBtn.addEventListener("click", openMenu);
   els.scrim.addEventListener("click", closeMenu);
 
   load();
-  if (!activeChat()) state.activeId = null;
   render();
   updateSend();
   els.input.focus();
